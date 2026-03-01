@@ -5,6 +5,7 @@ flake: {
   ...
 }: let
   cfg = config.programs.direnv-new;
+  direnvCfg = config.programs.direnv;
   flakePkgs = flake.packages.${pkgs.stdenv.hostPlatform.system};
 
   configFileContent = ''
@@ -39,17 +40,31 @@ in {
 
       silent = lib.mkOption {
         type = lib.types.bool;
-        default = false;
+        default = direnvCfg.silent or false;
+        defaultText = lib.literalExpression "config.programs.direnv.silent";
         description = ''
           Suppress non-essential output from direnv-new.
-          Also automatically respected at runtime when
-          programs.direnv.silent is true (via DIRENV_LOG_FORMAT="").
+          Defaults to the value of programs.direnv.silent when set.
+        '';
+      };
+
+      enableNixDirenv = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = ''
+          Enable nix-direnv integration.
+          Required for 'use nix -p' and 'use flake' in generated .envrc files.
+          Sets programs.direnv.nix-direnv.enable.
         '';
       };
     };
   };
 
   config = lib.mkIf cfg.enable {
+    programs.direnv = {
+      enable = true;
+      nix-direnv.enable = lib.mkDefault cfg.config.enableNixDirenv;
+    };
     environment.systemPackages = [flakePkgs.default];
     environment.etc."direnv-new/config".text = configFileContent;
   };
