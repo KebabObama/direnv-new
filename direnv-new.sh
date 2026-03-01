@@ -117,7 +117,7 @@ if [[ ${#packages[@]} -gt 0 ]]; then
   done
   display_parts="${display_parts% }"  # trim trailing space
 
-  envrc_content+=$'\n'"echo \"Direnv loaded: ${display_parts}\""
+  envrc_content+=$'\n'"[[ \"\${DIRENV_LOG_FORMAT-unset}\" != \"\" ]] && echo \"Direnv loaded: ${display_parts}\""
 fi
 
 if [[ "$use_flake" == true ]]; then

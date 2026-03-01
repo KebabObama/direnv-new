@@ -60,13 +60,26 @@ in {
     };
   };
 
-  config = lib.mkIf cfg.enable {
-    programs.direnv = {
-      enable = true;
-      package = lib.mkDefault flakePkgs.default;
-      nix-direnv.enable = lib.mkDefault cfg.config.enableNixDirenv;
-    };
+  config = lib.mkIf cfg.enable (lib.mkMerge [
+    {
+      programs.direnv = {
+        enable = true;
+        package = lib.mkDefault flakePkgs.default;
+        nix-direnv.enable = lib.mkDefault cfg.config.enableNixDirenv;
+      };
 
-    xdg.configFile."direnv-new/config".text = configFileContent;
-  };
+      xdg.configFile."direnv-new/config".text = configFileContent;
+    }
+
+    # Write direnv.toml with log_format="" when silent is enabled
+    # This is needed because direnv reads its config from the toml file,
+    # not the DIRENV_LOG_FORMAT environment variable in modern versions.
+    (lib.mkIf cfg.config.silent {
+      xdg.configFile."direnv/direnv.toml".text = lib.mkDefault ''
+        [global]
+        log_format = ""
+        hide_env_diff = true
+      '';
+    })
+  ]);
 }

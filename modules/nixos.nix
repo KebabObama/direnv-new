@@ -60,12 +60,22 @@ in {
     };
   };
 
-  config = lib.mkIf cfg.enable {
-    programs.direnv = {
-      enable = true;
-      nix-direnv.enable = lib.mkDefault cfg.config.enableNixDirenv;
-    };
-    environment.systemPackages = [flakePkgs.default];
-    environment.etc."direnv-new/config".text = configFileContent;
-  };
+  config = lib.mkIf cfg.enable (lib.mkMerge [
+    {
+      programs.direnv = {
+        enable = true;
+        nix-direnv.enable = lib.mkDefault cfg.config.enableNixDirenv;
+      };
+      environment.systemPackages = [flakePkgs.default];
+      environment.etc."direnv-new/config".text = configFileContent;
+    }
+
+    (lib.mkIf cfg.config.silent {
+      environment.etc."direnv/direnv.toml".text = lib.mkDefault ''
+        [global]
+        log_format = ""
+        hide_env_diff = true
+      '';
+    })
+  ]);
 }
