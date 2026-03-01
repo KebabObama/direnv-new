@@ -33,6 +33,11 @@ EOF
   exit 0
 }
 
+if [[ -f .envrc ]]; then
+  echo "Error: .envrc already exists."
+  exit 1
+fi
+
 # -----------------------------------------------------------------------------
 # Argument parsing
 # -----------------------------------------------------------------------------
@@ -48,47 +53,16 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     -p|--package)
       [[ -z "${2:-}" ]] && { echo "Error: $1 requires argument"; exit 1; }
-      packages+=("$2")
-      shift 2
-      ;;
-    -f|--flake)
-      use_flake=true
-      shift
-      ;;
-    -e|--edit)
-      open_editor=true
-      shift
-      ;;
-    -a|--apply)
-      auto_allow=true
-      shift
-      ;;
-    --no-ignore)
-      no_ignore=true
-      shift
-      ;;
-    --git)
-      init_git=true
-      shift
-      ;;
-    -h|--help)
-      usage
-      ;;
-    *)
-      echo "Unknown option: $1"
-      usage
-      ;;
+      packages+=("$2"); shift 2;;
+    -f|--flake) use_flake=true;shift;;
+    -e|--edit) open_editor=true; shift;;
+    -a|--apply) auto_allow=true; shift;;
+    --no-ignore) no_ignore=true; shift;;
+    --git) init_git=true; shift;;
+    -h|--help) usage; ;;
+    *) echo "Unknown option: $1"; usage;;
   esac
 done
-
-# -----------------------------------------------------------------------------
-# Safety checks
-# -----------------------------------------------------------------------------
-
-if [[ -f .envrc ]]; then
-  echo "Error: .envrc already exists."
-  exit 1
-fi
 
 # -----------------------------------------------------------------------------
 # Build .envrc
@@ -98,8 +72,12 @@ envrc_content='#!/usr/bin/env bash'
 envrc_content+=$'\n'
 
 if [[ ${#packages[@]} -gt 0 ]]; then
-  pkg_list="${packages[*]}"
-  envrc_content+=$'\n'"use nix -p ${pkg_list}"
+  envrc_content+=$'\n'"use nix -p ${packages[*]}"
+  display_parts=""
+  for pkg in "${packages[@]}"; do
+    display_parts+="{ pkgs.${pkg} } "
+  done
+  envrc_content+=$'\n'"echo \"Direnv loaded: ${display_parts% }\""
 fi
 
 if [[ "$use_flake" == true ]]; then

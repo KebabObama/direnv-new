@@ -42,7 +42,7 @@
     }
     // flake-utils.lib.eachSystem systems (
       system: let
-        pkgs = nixpkgs.legacyPackages.${system};
+        pkgs = nixpkgs.legacyPackages.${pkgs.stdenv.hostPlatform.system};
 
         direnv-new-script =
           pkgs.writeShellScriptBin "direnv-new"
