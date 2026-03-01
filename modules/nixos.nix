@@ -11,20 +11,11 @@ in {
     enable = lib.mkEnableOption "direnv 'new' subcommand for scaffolding .envrc files";
   };
 
-  config = lib.mkMerge [
-    {
-      environment.etc."direnv/direnv.toml".text = ''
-        [global]
-        log_format = ""
-        hide_env_diff = true
-      '';
-    }
-    (lib.mkIf cfg.enable {
-      programs.direnv = {
-        enable = true;
-        nix-direnv.enable = lib.mkDefault true;
-      };
-      environment.systemPackages = [flakePkgs.default];
-    })
-  ];
+  config = lib.mkIf cfg.enable {
+    programs.direnv = {
+      enable = true;
+      nix-direnv.enable = lib.mkDefault true;
+    };
+    environment.systemPackages = [flakePkgs.default];
+  };
 }

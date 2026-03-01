@@ -11,17 +11,32 @@
     nixpkgs,
     flake-utils,
     ...
-  }:
+  }: let
+    systems = flake-utils.lib.defaultSystems;
+  in
     {
-      homeManagerModules.default = import ./modules/home-manager.nix self;
-      nixosModules.default = import ./modules/nixos.nix self;
+      # Properly pass `self` into the HM module
+      homeManagerModules.default = {
+        config,
+        lib,
+        pkgs,
+        ...
+      }:
+        import ./modules/home-manager.nix {
+          inherit config lib pkgs;
+          flake = self;
+        };
     }
-    // flake-utils.lib.eachDefaultSystem (
+    // flake-utils.lib.eachSystem systems (
       system: let
         pkgs = nixpkgs.legacyPackages.${system};
 
-        direnv-new-script = pkgs.writeShellScriptBin "direnv-new" (builtins.readFile ./direnv-new.sh);
-        direnv-wrapped = pkgs.writeShellScriptBin "direnv" ''
+        direnv-new-script =
+          pkgs.writeShellScriptBin "direnv-new"
+          (builtins.readFile ./direnv-new.sh);
+
+        # SAFE dispatcher (no wrapProgram)
+        direnv-dispatch = pkgs.writeShellScriptBin "direnv" ''
           if [[ "''${1:-}" == "new" ]]; then
             shift
             exec ${direnv-new-script}/bin/direnv-new "$@"
@@ -32,13 +47,14 @@
 
         completions = pkgs.runCommand "direnv-new-completions" {} ''
           mkdir -p $out/share/bash-completion/completions
-          cp ${./completions.bash} $out/share/bash-completion/completions/direnv
+          cp ${./completions.bash} \
+             $out/share/bash-completion/completions/direnv
         '';
 
         direnv-combined = pkgs.symlinkJoin {
           name = "direnv";
           paths = [
-            direnv-wrapped
+            direnv-dispatch
             completions
           ];
         };
@@ -49,19 +65,9 @@
           default = direnv-combined;
         };
 
-        apps = {
-          direnv = {
-            type = "app";
-            program = "${direnv-combined}/bin/direnv";
-          };
-          direnv-new = {
-            type = "app";
-            program = "${direnv-combined}/bin/direnv-new";
-          };
-          default = {
-            type = "app";
-            program = "${direnv-combined}/bin/direnv";
-          };
+        apps.default = {
+          type = "app";
+          program = "${direnv-combined}/bin/direnv";
         };
 
         devShells.default = pkgs.mkShell {
