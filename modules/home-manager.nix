@@ -13,7 +13,7 @@ in {
 
   config = lib.mkMerge [
     {
-      programs.direnv.settings = {
+      programs.direnv.config = {
         global = {
           log_format = "";
           hide_env_diff = true;
