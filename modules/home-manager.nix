@@ -40,7 +40,7 @@ in {
 
       silent = lib.mkOption {
         type = lib.types.bool;
-        default = direnvCfg.silent or false;
+        default = direnvCfg.silent or true;
         defaultText = lib.literalExpression "config.programs.direnv.silent";
         description = ''
           Suppress non-essential output from direnv-new.
