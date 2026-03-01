@@ -26,7 +26,7 @@
         '';
 
         direnv-combined = pkgs.symlinkJoin {
-          name = "direnv-combined";
+          name = "direnv";
           paths = [
             direnv-wrapped
             direnv-new-script
