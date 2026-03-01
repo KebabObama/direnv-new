@@ -26,6 +26,7 @@ Options:
   -f, --flake          Add 'use flake'
   -e, --edit           Open .envrc in \$EDITOR
   -a, --apply          Run 'direnv allow' after creation
+  -s, --silent         Suppress package messages
       --no-ignore      Do not modify .gitignore
       --git            Initialize git repo if missing
   -h, --help           Show this help
@@ -46,6 +47,7 @@ packages=()
 use_flake=false
 open_editor=false
 auto_allow=false
+silent=false
 no_ignore="${DIRENV_NEW_NO_IGNORE:-false}"
 init_git="${DIRENV_NEW_CREATE_GIT:-false}"
 
@@ -57,9 +59,10 @@ while [[ $# -gt 0 ]]; do
     -f|--flake) use_flake=true;shift;;
     -e|--edit) open_editor=true; shift;;
     -a|--apply) auto_allow=true; shift;;
+    -s|--silent) silent=true; shift;;
     --no-ignore) no_ignore=true; shift;;
     --git) init_git=true; shift;;
-    -h|--help) usage; ;;
+    -h|--help) usage;;
     *) echo "Unknown option: $1"; usage;;
   esac
 done
@@ -77,7 +80,9 @@ if [[ ${#packages[@]} -gt 0 ]]; then
   for pkg in "${packages[@]}"; do
     display_parts+="{ pkgs.${pkg} } "
   done
-  envrc_content+=$'\n'"echo \"Direnv loaded: ${display_parts% }\""
+  if [[ "$silent" == false ]]; then
+    envrc_content+=$'\n'"echo \"Direnv loaded: ${display_parts% }\""
+  fi
 fi
 
 if [[ "$use_flake" == true ]]; then
