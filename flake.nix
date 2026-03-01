@@ -13,17 +13,32 @@
     ...
   }: let
     systems = flake-utils.lib.defaultSystems;
+
+    # ----------------------------------------
+    # Shared module (works for NixOS + HM)
+    # ----------------------------------------
+    direnvModule = {
+      config,
+      lib,
+      pkgs,
+      ...
+    }: {
+      options.programs.direnv.new.enable =
+        lib.mkEnableOption "direnv 'new' subcommand";
+
+      config = lib.mkIf config.programs.direnv.new.enable {
+        programs.direnv = {
+          enable = true;
+          package =
+            lib.mkDefault self.packages.${pkgs.system}.default;
+          nix-direnv.enable = lib.mkDefault true;
+        };
+      };
+    };
   in
     {
-      homeManagerModules.default = {
-        config,
-        lib,
-        pkgs,
-        ...
-      }:
-        import ./modules/home-manager.nix {
-          inherit config lib pkgs self;
-        };
+      homeManagerModules.default = direnvModule;
+      nixosModules.default = direnvModule;
     }
     // flake-utils.lib.eachSystem systems (
       system: let
