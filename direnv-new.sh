@@ -2,38 +2,56 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: direnv new [-p package1] [-p package2] [-f] [-e] ..."
+  echo "Usage: direnv new [-p package1] [-p package2] [-f] [-e] [-a] ..."
   echo ""
   echo "Creates an .envrc file with optional nix packages."
   echo ""
   echo "Options:"
-  echo "  -p <package>   Add a nix package (can be repeated)"
-  echo "  -f             Add 'use flake' directive"
-  echo "  -e             Open .envrc in \$EDITOR after creation"
-  echo "  -h             Show this help message"
+  echo "  -p, --package <pkg>  Add a nix package (can be repeated)"
+  echo "  -f, --flake          Add 'use flake' directive"
+  echo "  -e, --edit           Open .envrc in \$EDITOR after creation"
+  echo "  -a, --apply          Run 'direnv allow' after creation"
+  echo "      --no-ignore      Do not write to .gitignore"
+  echo "      --git            Initialize a git repo if .git does not exist"
+  echo "  -h, --help           Show this help message"
   exit 0
 }
 
 packages=()
 use_flake=false
 open_editor=false
+auto_allow=false
+no_ignore=false
+init_git=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -p)
+    -p|--package)
       if [[ -z "${2:-}" ]]; then
-        echo "Error: -p requires a package name argument"
+        echo "Error: $1 requires a package name argument"
         exit 1
       fi
       packages+=("$2")
       shift 2
       ;;
-    -f)
+    -f|--flake)
       use_flake=true
       shift
       ;;
-    -e)
+    -e|--edit)
       open_editor=true
+      shift
+      ;;
+    -a|--apply)
+      auto_allow=true
+      shift
+      ;;
+    --no-ignore)
+      no_ignore=true
+      shift
+      ;;
+    --git)
+      init_git=true
       shift
       ;;
     -h|--help)
@@ -79,8 +97,18 @@ fi
 echo "$envrc_content" > .envrc
 echo "Created .envrc"
 
-# Handle .gitignore if inside a git repo
-if git rev-parse --git-dir &>/dev/null; then
+# Initialize git repo if --git flag was given
+if [[ "$init_git" == true ]]; then
+  if [[ ! -d .git ]]; then
+    git init
+    echo "Initialized git repository"
+  else
+    echo "Git repository already exists"
+  fi
+fi
+
+# Handle .gitignore if inside a git repo (unless --no-ignore)
+if [[ "$no_ignore" == false ]] && git rev-parse --git-dir &>/dev/null; then
   gitignore_entry="/.direnv/*"
   if [[ -f .gitignore ]]; then
     if ! grep -qxF "$gitignore_entry" .gitignore; then
@@ -96,13 +124,21 @@ if git rev-parse --git-dir &>/dev/null; then
   fi
 fi
 
-echo "Done! Run 'direnv allow' to activate."
+echo "Done!"
 
-# Open in editor if -e flag was given
+# Open in editor if -e flag was given (wait for editor to close)
 if [[ "$open_editor" == true ]]; then
   if [[ -z "${EDITOR:-}" ]]; then
     echo "Warning: \$EDITOR is not set. Cannot open .envrc."
   else
-    exec "$EDITOR" .envrc
+    "$EDITOR" .envrc
   fi
+fi
+
+# Run direnv allow if -a/--apply flag was given
+if [[ "$auto_allow" == true ]]; then
+  echo "Running 'direnv allow'..."
+  direnv allow
+else
+  echo "Run 'direnv allow' to activate."
 fi

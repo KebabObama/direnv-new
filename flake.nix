@@ -25,11 +25,17 @@
           fi
         '';
 
+        completions = pkgs.runCommand "direnv-new-completions" {} ''
+          mkdir -p $out/share/bash-completion/completions
+          cp ${./completions.bash} $out/share/bash-completion/completions/direnv
+        '';
+
         direnv-combined = pkgs.symlinkJoin {
           name = "direnv";
           paths = [
             direnv-wrapped
             direnv-new-script
+            completions
           ];
         };
       in {
