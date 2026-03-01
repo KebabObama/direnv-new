@@ -39,7 +39,6 @@
           name = "direnv";
           paths = [
             direnv-wrapped
-            direnv-new-script
             completions
           ];
         };
