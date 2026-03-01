@@ -14,12 +14,16 @@ _direnv_new_complete_packages() {
   if [[ "${DIRENV_NEW_AUTOCOMPLETE:-true}" != "true" ]]; then
     return
   fi
+  # Require at least 3 characters to avoid expensive full-index queries
+  if [[ ${#cur} -lt 3 ]]; then
+    return
+  fi
   if command -v nix &>/dev/null; then
-    if [[ -n "$cur" ]]; then
-      local pkgs
-      pkgs=$(nix-env -qaP --no-name 2>/dev/null | grep -i "^nixpkgs\.$cur" | sed 's/^nixpkgs\.//' | head -20)
-      COMPREPLY=( $(compgen -W "$pkgs" -- "$cur") )
-    fi
+    local pkgs
+    pkgs=$(nix search nixpkgs "^$cur" --json 2>/dev/null \
+      | grep -oP '"legacyPackages\.[^.]+\.\K[^"]+' \
+      | head -20)
+    COMPREPLY=( $(compgen -W "$pkgs" -- "$cur") )
   fi
 }
 
