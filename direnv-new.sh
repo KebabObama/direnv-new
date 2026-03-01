@@ -52,7 +52,7 @@ done
 [[ -f .envrc ]] && { echo "Error: .envrc already exists in the current directory. Remove it first if you want to recreate it."; exit 1; }
 
 # Build the .envrc content
-envrc_content='#!/usr/bin/env bash'$'\n''export DIRENV_LOG_FORMAT=""'
+envrc_content='#!/usr/bin/env bash'
 if [[ ${#packages[@]} -gt 0 ]]; then
   envrc_content+=$'\n'"use nix -p ${packages[*]}"
   display_parts=""
