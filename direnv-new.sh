@@ -52,14 +52,14 @@ done
 [[ -f .envrc ]] && { echo "Error: .envrc already exists in the current directory. Remove it first if you want to recreate it."; exit 1; }
 
 # Build the .envrc content
-envrc_content='#!/usr/bin/env bash'
+envrc_content='#!/usr/bin/env bash'$'\n''export DIRENV_LOG_FORMAT=""'
 if [[ ${#packages[@]} -gt 0 ]]; then
   envrc_content+=$'\n'"use nix -p ${packages[*]}"
   display_parts=""
   for pkg in "${packages[@]}"; do
     display_parts+="{ pkgs.${pkg} } "
   done
-  envrc_content+=$'\n'"[[ \"\${DIRENV_LOG_FORMAT-unset}\" != \"\" ]] && echo \"Direnv loaded: ${display_parts% }\""
+  envrc_content+=$'\n'"echo \"Direnv loaded: ${display_parts% }\""
 fi
 [[ "$use_flake" == true ]] && envrc_content+=$'\n'"use flake"
 
