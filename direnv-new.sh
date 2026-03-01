@@ -1,103 +1,162 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Load configuration
-[[ -f "/etc/direnv-new/config" ]] && source "/etc/direnv-new/config"
-[[ -f "${XDG_CONFIG_HOME:-$HOME/.config}/direnv-new/config" ]] && source "${XDG_CONFIG_HOME:-$HOME/.config}/direnv-new/config"
+# -----------------------------------------------------------------------------
+# Configuration loading
+# -----------------------------------------------------------------------------
 
-# Detect silent mode
-_silent=false
-[[ "${DIRENV_NEW_SILENT:-false}" == "true" ]] && _silent=true
-[[ "${DIRENV_LOG_FORMAT+set}" == "set" && -z "${DIRENV_LOG_FORMAT:-}" ]] && _silent=true
+_sys_config="/etc/direnv-new/config"
+[[ -f "$_sys_config" ]] && source "$_sys_config"
 
-log() { [[ "$_silent" != "true" ]] && echo "$@"; }
+_user_config="${XDG_CONFIG_HOME:-$HOME/.config}/direnv-new/config"
+[[ -f "$_user_config" ]] && source "$_user_config"
+
+# -----------------------------------------------------------------------------
+# Usage
+# -----------------------------------------------------------------------------
 
 usage() {
   cat <<EOF
-Usage: direnv new [-p package1] [-p package2] [-f] [-e] [-a] ...
+Usage: direnv new [options]
 
 Creates an .envrc file with optional nix packages.
 
 Options:
-  -p, --package <pkg>  Add a nix package (can be repeated)
-  -f, --flake          Add 'use flake' directive
-  -e, --edit           Open .envrc in \$EDITOR after creation
+  -p, --package <pkg>  Add a nix package (repeatable)
+  -f, --flake          Add 'use flake'
+  -e, --edit           Open .envrc in \$EDITOR
   -a, --apply          Run 'direnv allow' after creation
-      --no-ignore      Do not write to .gitignore
-      --git            Initialize a git repo if .git does not exist
-  -h, --help           Show this help message
+      --no-ignore      Do not modify .gitignore
+      --git            Initialize git repo if missing
+  -h, --help           Show this help
 EOF
   exit 0
 }
 
+# -----------------------------------------------------------------------------
+# Argument parsing
+# -----------------------------------------------------------------------------
+
 packages=()
-use_flake=false open_editor=false auto_allow=false
+use_flake=false
+open_editor=false
+auto_allow=false
 no_ignore="${DIRENV_NEW_NO_IGNORE:-false}"
 init_git="${DIRENV_NEW_CREATE_GIT:-false}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -p|--package) packages+=("${2:?Error: $1 requires a package name argument}"); shift 2;;
-    -f|--flake) use_flake=true; shift;;
-    -e|--edit) open_editor=true; shift;;
-    -a|--apply) auto_allow=true; shift;;
-    --no-ignore) no_ignore=true; shift;;
-    --git) init_git=true; shift;;
-    -h|--help) usage;;
-    *) echo "Unknown option: $1"; usage;;
+    -p|--package)
+      [[ -z "${2:-}" ]] && { echo "Error: $1 requires argument"; exit 1; }
+      packages+=("$2")
+      shift 2
+      ;;
+    -f|--flake)
+      use_flake=true
+      shift
+      ;;
+    -e|--edit)
+      open_editor=true
+      shift
+      ;;
+    -a|--apply)
+      auto_allow=true
+      shift
+      ;;
+    --no-ignore)
+      no_ignore=true
+      shift
+      ;;
+    --git)
+      init_git=true
+      shift
+      ;;
+    -h|--help)
+      usage
+      ;;
+    *)
+      echo "Unknown option: $1"
+      usage
+      ;;
   esac
 done
 
-# Check if .envrc already exists
-[[ -f .envrc ]] && { echo "Error: .envrc already exists in the current directory. Remove it first if you want to recreate it."; exit 1; }
+# -----------------------------------------------------------------------------
+# Safety checks
+# -----------------------------------------------------------------------------
 
-# Build the .envrc content
+if [[ -f .envrc ]]; then
+  echo "Error: .envrc already exists."
+  exit 1
+fi
+
+# -----------------------------------------------------------------------------
+# Build .envrc
+# -----------------------------------------------------------------------------
+
 envrc_content='#!/usr/bin/env bash'
+envrc_content+=$'\n'
+
 if [[ ${#packages[@]} -gt 0 ]]; then
-  envrc_content+=$'\n'"use nix -p ${packages[*]}"
-  display_parts=""
-  for pkg in "${packages[@]}"; do
-    display_parts+="{ pkgs.${pkg} } "
-  done
-  envrc_content+=$'\n'"echo \"Direnv loaded: ${display_parts% }\""
+  pkg_list="${packages[*]}"
+  envrc_content+=$'\n'"use nix -p ${pkg_list}"
 fi
-[[ "$use_flake" == true ]] && envrc_content+=$'\n'"use flake"
 
-# Write .envrc
+if [[ "$use_flake" == true ]]; then
+  envrc_content+=$'\n'"use flake"
+fi
+
+# -----------------------------------------------------------------------------
+# Write file
+# -----------------------------------------------------------------------------
+
 echo "$envrc_content" > .envrc
-log "Created .envrc"
 
-# Initialize git repo if --git flag was given
-if [[ "$init_git" == true ]] && [[ ! -d .git ]]; then
-  git init
-  log "Initialized git repository"
+# -----------------------------------------------------------------------------
+# Git initialization
+# -----------------------------------------------------------------------------
+
+if [[ "$init_git" == true ]]; then
+  if [[ ! -d .git ]]; then
+    git init >/dev/null 2>&1
+  fi
 fi
 
-# Handle .gitignore if inside a git repo (unless --no-ignore)
+# -----------------------------------------------------------------------------
+# .gitignore handling
+# -----------------------------------------------------------------------------
+
 if [[ "$no_ignore" == false ]] && git rev-parse --git-dir &>/dev/null; then
-  gitignore_entry="/.direnv/*"
+  entry="/.direnv"
+
   if [[ -f .gitignore ]]; then
-    grep -qxF "$gitignore_entry" .gitignore || { echo "" >> .gitignore; echo "$gitignore_entry" >> .gitignore; log "Appended $gitignore_entry to .gitignore"; }
+    if ! grep -qxF "$entry" .gitignore; then
+      {
+        echo ""
+        echo "$entry"
+      } >> .gitignore
+    fi
   else
-    echo "$gitignore_entry" > .gitignore
-    log "Created .gitignore with $gitignore_entry"
+    echo "$entry" > .gitignore
   fi
 fi
 
-# Open in editor if -e flag was given
+# -----------------------------------------------------------------------------
+# Optional editor
+# -----------------------------------------------------------------------------
+
 if [[ "$open_editor" == true ]]; then
-  if [[ -z "${EDITOR:-}" ]]; then
-    echo "Warning: \$EDITOR is not set. Cannot open .envrc."
+  if [[ -n "${EDITOR:-}" ]]; then
+    "$EDITOR" .envrc
   else
-    "$EDITOR" .envrc || true
+    echo "Warning: \$EDITOR not set."
   fi
 fi
 
-# Run direnv allow if -a/--apply flag was given
+# -----------------------------------------------------------------------------
+# Optional allow
+# -----------------------------------------------------------------------------
+
 if [[ "$auto_allow" == true ]]; then
-  log "Running 'direnv allow'..."
   direnv allow
-  log "Done!"
-else
-  log "Done! Run 'direnv allow' to activate."
 fi
