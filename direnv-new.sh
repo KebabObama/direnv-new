@@ -84,14 +84,12 @@ if [[ "$no_ignore" == false ]] && git rev-parse --git-dir &>/dev/null; then
   fi
 fi
 
-log "Done!"
-
 # Open in editor if -e flag was given
 if [[ "$open_editor" == true ]]; then
   if [[ -z "${EDITOR:-}" ]]; then
     echo "Warning: \$EDITOR is not set. Cannot open .envrc."
   else
-    "$EDITOR" .envrc
+    "$EDITOR" .envrc || true
   fi
 fi
 
@@ -99,6 +97,7 @@ fi
 if [[ "$auto_allow" == true ]]; then
   log "Running 'direnv allow'..."
   direnv allow
+  log "Done!"
 else
-  log "Run 'direnv allow' to activate."
+  log "Done! Run 'direnv allow' to activate."
 fi
