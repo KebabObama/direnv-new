@@ -15,8 +15,8 @@ in {
     {
       programs.direnv.config = {
         global = {
-          log_format = "";
-          hide_env_diff = true;
+          log_format = lib.mkForce "";
+          hide_env_diff = lib.mkForce true;
         };
       };
     }
