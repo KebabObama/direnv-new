@@ -2,7 +2,7 @@
   config,
   lib,
   pkgs,
-  flake,
+  self,
   ...
 }: {
   options.programs.direnv.new.enable =
@@ -11,7 +11,7 @@
   config = lib.mkIf config.programs.direnv.new.enable {
     programs.direnv = {
       enable = true;
-      package = lib.mkDefault flake.packages.${pkgs.stdenv.hostPlatform.system}.default;
+      package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.default;
       nix-direnv.enable = lib.mkDefault true;
     };
   };

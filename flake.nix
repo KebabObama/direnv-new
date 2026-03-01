@@ -15,7 +15,6 @@
     systems = flake-utils.lib.defaultSystems;
   in
     {
-      # Properly pass `self` into the HM module
       homeManagerModules.default = {
         config,
         lib,
@@ -23,8 +22,7 @@
         ...
       }:
         import ./modules/home-manager.nix {
-          inherit config lib pkgs;
-          flake = self;
+          inherit config lib pkgs self;
         };
     }
     // flake-utils.lib.eachSystem systems (
@@ -35,7 +33,6 @@
           pkgs.writeShellScriptBin "direnv-new"
           (builtins.readFile ./direnv-new.sh);
 
-        # SAFE dispatcher (no wrapProgram)
         direnv-dispatch = pkgs.writeShellScriptBin "direnv" ''
           if [[ "''${1:-}" == "new" ]]; then
             shift
@@ -47,12 +44,12 @@
 
         completions = pkgs.runCommand "direnv-new-completions" {} ''
           mkdir -p $out/share/bash-completion/completions
-          cp ${./completions.bash} \
-             $out/share/bash-completion/completions/direnv
+          cp ${./completions.bash} $out/share/bash-completion/completions/direnv
         '';
 
         direnv-combined = pkgs.symlinkJoin {
           name = "direnv";
+          meta.mainProgram = "direnv";
           paths = [
             direnv-dispatch
             completions
