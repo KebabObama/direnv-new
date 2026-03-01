@@ -30,7 +30,7 @@
         programs.direnv = {
           enable = true;
           package =
-            lib.mkDefault self.packages.${pkgs.system}.default;
+            lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.default;
           nix-direnv.enable = lib.mkDefault true;
         };
       };
@@ -42,7 +42,7 @@
     }
     // flake-utils.lib.eachSystem systems (
       system: let
-        pkgs = nixpkgs.legacyPackages.${pkgs.stdenv.hostPlatform.system};
+        pkgs = nixpkgs.legacyPackages.${system};
 
         direnv-new-script =
           pkgs.writeShellScriptBin "direnv-new"
