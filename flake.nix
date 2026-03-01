@@ -7,11 +7,16 @@
   };
 
   outputs = {
+    self,
     nixpkgs,
     flake-utils,
     ...
   }:
-    flake-utils.lib.eachDefaultSystem (
+    {
+      homeManagerModules.default = import ./modules/home-manager.nix self;
+      nixosModules.default = import ./modules/nixos.nix self;
+    }
+    // flake-utils.lib.eachDefaultSystem (
       system: let
         pkgs = nixpkgs.legacyPackages.${system};
 

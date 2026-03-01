@@ -1,6 +1,37 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Load configuration defaults
+# System config (set by NixOS module)
+_sys_config="/etc/direnv-new/config"
+if [[ -f "$_sys_config" ]]; then
+  # shellcheck source=/dev/null
+  source "$_sys_config"
+fi
+
+# User config (set by home-manager module)
+_user_config="${XDG_CONFIG_HOME:-$HOME/.config}/direnv-new/config"
+if [[ -f "$_user_config" ]]; then
+  # shellcheck source=/dev/null
+  source "$_user_config"
+fi
+
+# Detect silent mode:
+#   - Explicit DIRENV_NEW_SILENT=true (from config or env)
+#   - programs.direnv.silent sets DIRENV_LOG_FORMAT=""
+if [[ "${DIRENV_NEW_SILENT:-false}" == "true" ]] || \
+   [[ "${DIRENV_LOG_FORMAT+set}" == "set" && -z "${DIRENV_LOG_FORMAT:-}" ]]; then
+  _silent=true
+else
+  _silent=false
+fi
+
+log() {
+  if [[ "$_silent" != "true" ]]; then
+    echo "$@"
+  fi
+}
+
 usage() {
   echo "Usage: direnv new [-p package1] [-p package2] [-f] [-e] [-a] ..."
   echo ""
@@ -21,8 +52,8 @@ packages=()
 use_flake=false
 open_editor=false
 auto_allow=false
-no_ignore=false
-init_git=false
+no_ignore="${DIRENV_NEW_NO_IGNORE:-false}"
+init_git="${DIRENV_NEW_CREATE_GIT:-false}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -95,15 +126,15 @@ fi
 
 # Write .envrc
 echo "$envrc_content" > .envrc
-echo "Created .envrc"
+log "Created .envrc"
 
 # Initialize git repo if --git flag was given
 if [[ "$init_git" == true ]]; then
   if [[ ! -d .git ]]; then
     git init
-    echo "Initialized git repository"
+    log "Initialized git repository"
   else
-    echo "Git repository already exists"
+    log "Git repository already exists"
   fi
 fi
 
@@ -114,17 +145,17 @@ if [[ "$no_ignore" == false ]] && git rev-parse --git-dir &>/dev/null; then
     if ! grep -qxF "$gitignore_entry" .gitignore; then
       echo "" >> .gitignore
       echo "$gitignore_entry" >> .gitignore
-      echo "Appended $gitignore_entry to .gitignore"
+      log "Appended $gitignore_entry to .gitignore"
     else
-      echo ".gitignore already contains $gitignore_entry"
+      log ".gitignore already contains $gitignore_entry"
     fi
   else
     echo "$gitignore_entry" > .gitignore
-    echo "Created .gitignore with $gitignore_entry"
+    log "Created .gitignore with $gitignore_entry"
   fi
 fi
 
-echo "Done!"
+log "Done!"
 
 # Open in editor if -e flag was given (wait for editor to close)
 if [[ "$open_editor" == true ]]; then
@@ -137,8 +168,8 @@ fi
 
 # Run direnv allow if -a/--apply flag was given
 if [[ "$auto_allow" == true ]]; then
-  echo "Running 'direnv allow'..."
+  log "Running 'direnv allow'..."
   direnv allow
 else
-  echo "Run 'direnv allow' to activate."
+  log "Run 'direnv allow' to activate."
 fi

@@ -1,5 +1,28 @@
 # Bash completion for direnv-new and 'direnv new'
 
+_direnv_new_load_config() {
+  # Source config files for DIRENV_NEW_AUTOCOMPLETE setting
+  local _sys_config="/etc/direnv-new/config"
+  local _user_config="${XDG_CONFIG_HOME:-$HOME/.config}/direnv-new/config"
+  [[ -f "$_sys_config" ]] && source "$_sys_config"
+  [[ -f "$_user_config" ]] && source "$_user_config"
+}
+
+_direnv_new_complete_packages() {
+  local cur="$1"
+  _direnv_new_load_config
+  if [[ "${DIRENV_NEW_AUTOCOMPLETE:-true}" != "true" ]]; then
+    return
+  fi
+  if command -v nix &>/dev/null; then
+    if [[ -n "$cur" ]]; then
+      local pkgs
+      pkgs=$(nix-env -qaP --no-name 2>/dev/null | grep -i "^nixpkgs\.$cur" | sed 's/^nixpkgs\.//' | head -20)
+      COMPREPLY=( $(compgen -W "$pkgs" -- "$cur") )
+    fi
+  fi
+}
+
 _direnv_new_completions() {
   local cur prev opts
   COMPREPLY=()
@@ -10,15 +33,7 @@ _direnv_new_completions() {
 
   case "$prev" in
     -p|--package)
-      # Complete with available nix packages if nix is available
-      if command -v nix &>/dev/null; then
-        local query="${cur:-}"
-        if [[ -n "$query" ]]; then
-          local pkgs
-          pkgs=$(nix-env -qaP --no-name 2>/dev/null | grep -i "^nixpkgs\.$query" | sed 's/^nixpkgs\.//' | head -20)
-          COMPREPLY=( $(compgen -W "$pkgs" -- "$cur") )
-        fi
-      fi
+      _direnv_new_complete_packages "$cur"
       return
       ;;
   esac
@@ -50,14 +65,7 @@ _direnv_completions() {
     prev="${COMP_WORDS[COMP_CWORD-1]}"
     case "$prev" in
       -p|--package)
-        if command -v nix &>/dev/null; then
-          local query="${cur:-}"
-          if [[ -n "$query" ]]; then
-            local pkgs
-            pkgs=$(nix-env -qaP --no-name 2>/dev/null | grep -i "^nixpkgs\.$query" | sed 's/^nixpkgs\.//' | head -20)
-            COMPREPLY=( $(compgen -W "$pkgs" -- "$cur") )
-          fi
-        fi
+        _direnv_new_complete_packages "$cur"
         return
         ;;
     esac
