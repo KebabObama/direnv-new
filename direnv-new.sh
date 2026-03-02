@@ -122,14 +122,12 @@ if [[ "$no_shebang" != true ]]; then
 fi
 
 if [[ "$source_up" == true ]]; then
-  envrc_content+=$'\n'
   envrc_content+=$'\n# Inherit parent .envrc if it exists'
   envrc_content+=$'\nsource_up >/dev/null 2>&1 || true'
   envrc_content+=$'\n'
 fi
 
 if [[ -n "$template_content" ]]; then
-  envrc_content+=$'\n'
   envrc_content+=$'\n# Template: '"$template_name"
   envrc_content+=$'\n'"$template_content"
 fi
