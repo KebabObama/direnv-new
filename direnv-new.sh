@@ -27,6 +27,8 @@ Options:
   -e, --edit           Open .envrc in \$EDITOR
   -a, --apply          Run 'direnv allow' after creation
   -s, --silent         Suppress package messages
+  -c, --current        Use current path in message
+  -u, --up             Add source up to parent .envrc if exists
       --no-ignore      Do not modify .gitignore
       --git            Initialize git repo if missing
   -h, --help           Show this help
@@ -45,6 +47,8 @@ fi
 
 packages=()
 use_flake=false
+current=false
+source_up=false
 open_editor=false
 auto_allow=false
 silent=false
@@ -60,6 +64,8 @@ while [[ $# -gt 0 ]]; do
     -e|--edit) open_editor=true; shift;;
     -a|--apply) auto_allow=true; shift;;
     -s|--silent) silent=true; shift;;
+    -c|--current) current=true; shift;;
+    -u|--up) source_up=true; shift;;
     --no-ignore) no_ignore=true; shift;;
     --git) init_git=true; shift;;
     -h|--help) usage;;
@@ -74,6 +80,14 @@ done
 envrc_content='#!/usr/bin/env bash'
 envrc_content+=$'\n'
 
+if [[ "$use_source_up" == true ]]; then
+  envrc_content+=$'\n'
+  envrc_content+=$'\n# Inherit parent .envrc if it exists'
+  envrc_content+=$'\n'"if command -v source_up >/dev/null 2>&1; then"
+  envrc_content+=$'\n  source_up || true'
+  envrc_content+=$'\nfi'
+fi
+
 if [[ ${#packages[@]} -gt 0 ]]; then
   envrc_content+=$'\n'"use nix -p ${packages[*]}"
   display_parts=""
@@ -81,7 +95,19 @@ if [[ ${#packages[@]} -gt 0 ]]; then
     display_parts+="{ pkgs.${pkg} } "
   done
   if [[ "$silent" == false ]]; then
-    envrc_content+=$'\n'"echo \"Direnv loaded: ${display_parts% }\""
+    if [[ "$current" == true ]]; then
+      envrc_content+=$'\n'"echo \"Direnv loaded in $(pwd) with packages: ${display_parts% }\""
+    else
+      envrc_content+=$'\n'"echo \"Direnv loaded\""
+    fi
+  fi
+else
+  if [[ "$silent" == false ]]; then
+    if [[ "$current" == true ]]; then
+      envrc_content+=$'\n'"echo \"Direnv loaded in $(pwd)\""
+    else
+      envrc_content+=$'\n'"echo \"Direnv loaded\""
+    fi
   fi
 fi
 
