@@ -130,12 +130,13 @@ if [[ ${#packages[@]} -gt 0 ]]; then
   if [[ "$silent" == false ]]; then
     display_parts=""
     for pkg in "${packages[@]}"; do
-      display_parts+="{ pkgs.${pkg} } "
+      display_parts+="pkgs.${pkg} "
     done
+    display_parts="{ ${display_parts% } }"
     if [[ "$current" == true ]]; then
-      envrc_content+=$'\n'"echo \"Direnv loaded in $(pwd) with packages: ${display_parts% }\""
+      envrc_content+=$'\n'"echo \"Direnv loaded in $(pwd) with packages: ${display_parts}\""
     else
-      envrc_content+=$'\n'"echo \"Direnv loaded with packages: ${display_parts% }\""
+      envrc_content+=$'\n'"echo \"Direnv loaded with packages: ${display_parts}\""
     fi
   fi
 else
