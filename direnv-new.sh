@@ -38,11 +38,6 @@ EOF
   exit 0
 }
 
-if [[ "$dry_run" != true && -f .envrc ]]; then
-  echo "Error: .envrc already exists."
-  exit 1
-fi
-
 # -----------------------------------------------------------------------------
 # Argument parsing
 # -----------------------------------------------------------------------------
@@ -78,6 +73,11 @@ while [[ $# -gt 0 ]]; do
     *) echo "Unknown option: $1"; usage;;
   esac
 done
+
+if [[ "$dry_run" != true && -f .envrc ]]; then
+  echo "Error: .envrc already exists."
+  exit 1
+fi
 
 # -----------------------------------------------------------------------------
 # Build .envrc
