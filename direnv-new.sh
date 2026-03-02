@@ -32,6 +32,7 @@ Options:
   -u, --up              Add source up to parent .envrc if exists
   -n, --no-shebang      Do not add shebang to .envrc
   -d, --dry-run         Write .envrc to stdout instead of file
+  -i, --ignore          Add .envrc to .gitignore
       --no-ignore       Do not modify .gitignore
       --git             Initialize git repo if missing
   -h, --help            Show this help
@@ -53,31 +54,39 @@ open_editor=false
 no_shebang=false
 auto_allow=false
 silent=false
+add_envrc_to_ignore=false
 no_ignore="${DIRENV_NEW_NO_IGNORE:-false}"
 init_git="${DIRENV_NEW_CREATE_GIT:-false}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -h|--help) usage;;
-    -p|--package)
-      [[ -z "${2:-}" ]] && { echo "Error: $1 requires argument"; exit 1; }
-      packages+=("$2"); shift 2;;
-    -t|--template)
-      [[ -z "${2:-}" ]] && { echo "Error: $1 requires argument"; exit 1; }
-      template_name="$2"; shift 2;;
-    -f|--flake) use_flake=true;shift;;
-    -e|--edit) open_editor=true; shift;;
-    -a|--apply) auto_allow=true; shift;;
-    -s|--silent) silent=true; shift;;
-    -c|--current) current=true; shift;;
-    -u|--up) source_up=true; shift;;
-    -n|--no-shebang) no_shebang=true; shift;;
-    -d|--dry-run) dry_run=true; shift;;
-    --no-ignore) no_ignore=true; shift;;
-    --git) init_git=true; shift;;
-    *) echo "Unknown option: $1"; usage;;
+  -h | --help) usage ;;
+  -p | --package) 
+    [[ -z "${2:-}" ]] && { echo "Error: $1 requires argument"; exit 1; }
+    packages+=("$2"); shift 2 ;;
+  -t | --template)
+    [[ -z "${2:-}" ]] && { echo "Error: $1 requires argument"; exit 1; }
+    template_name="$2"; shift 2 ;;
+  -f | --flake) use_flake=true; shift ;;
+  -e | --edit) open_editor=true; shift ;;
+  -a | --apply) auto_allow=true; shift ;;
+  -s | --silent) silent=true; shift ;;
+  -c | --current) current=true; shift ;;
+  -u | --up) source_up=true; shift ;;
+  -n | --no-shebang) no_shebang=true; shift ;;
+  -d | --dry-run) dry_run=true; shift ;;
+  -i | --ignore) add_envrc_to_ignore=true; shift ;;
+  --no-ignore) no_ignore=true; shift ;;
+  --git) init_git=true; shift ;;
+  *) echo "Unknown option: $1"; usage ;;
   esac
 done
+
+# Check for conflicting flags
+if [[ "$add_envrc_to_ignore" == true && "$no_ignore" == true ]]; then
+  echo "Error: Cannot use --ignore and --no-ignore together"
+  exit 1
+fi
 
 if [[ "$dry_run" != true && -f .envrc ]]; then
   echo "Error: .envrc already exists."
@@ -160,7 +169,7 @@ fi
 if [[ "$dry_run" == true ]]; then
   echo "$envrc_content"
 else
-  echo "$envrc_content" > .envrc
+  echo "$envrc_content" >.envrc
 fi
 
 # -----------------------------------------------------------------------------
@@ -177,16 +186,31 @@ fi
 # .gitignore handling
 # -----------------------------------------------------------------------------
 
-if [[ "$dry_run" != true && "$no_ignore" == false ]] && git rev-parse --git-dir &>/dev/null; then  entry="/.direnv"
+if [[ "$dry_run" != true && "$no_ignore" == false ]] && git rev-parse --git-dir &>/dev/null; then
+  entry="/.direnv"
   if [[ -f .gitignore ]]; then
     if ! grep -qxF "$entry" .gitignore; then
       {
         echo ""
         echo "$entry"
-      } >> .gitignore
+      } >>.gitignore
     fi
   else
-    echo "$entry" > .gitignore
+    echo "$entry" >.gitignore
+  fi
+fi
+
+if [[ "$dry_run" != true && "$add_envrc_to_ignore" == true && "$no_ignore" == false ]] && git rev-parse --git-dir &>/dev/null; then
+  entry="/.envrc"
+  if [[ -f .gitignore ]]; then
+    if ! grep -qxF "$entry" .gitignore; then
+      {
+        echo ""
+        echo "$entry"
+      } >>.gitignore
+    fi
+  else
+    echo "$entry" >.gitignore
   fi
 fi
 
@@ -209,3 +233,4 @@ fi
 if [[ "$dry_run" != true && "$auto_allow" == true ]]; then
   direnv allow
 fi
+
