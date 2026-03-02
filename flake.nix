@@ -61,10 +61,10 @@
               nix-direnv.enable = lib.mkDefault true;
             };
           }
-          (lib.mkIf (templateConfig != "" && options ? environment.etc) {
+          (lib.mkIf (templateConfig != "" && lib.hasAttrByPath ["environment" "etc"] options) {
             environment.etc."direnv-new/config".text = templateConfig;
           })
-          (lib.mkIf (templateConfig != "" && options ? xdg.configFile) {
+          (lib.mkIf (templateConfig != "" && lib.hasAttrByPath ["xdg" "configFile"] options) {
             xdg.configFile."direnv-new/config".text = templateConfig;
           })
         ]
