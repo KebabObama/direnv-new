@@ -22,20 +22,20 @@ Usage: direnv new [options]
 Creates an .envrc file with optional nix packages.
 
 Options:
-  -p, --package <pkg>   Add a nix package (repeatable)
-  -t, --template <name> Use a configured template (defaults to \$DIRENV_NEW_DEFAULT_TEMPLATE)
-  -f, --flake           Add 'use flake'
-  -e, --edit            Open .envrc in \$EDITOR
-  -a, --apply           Run 'direnv allow' after creation
-  -s, --silent          Suppress package messages
-  -c, --current         Use current path in message
-  -u, --up              Add source up to parent .envrc if exists
-  -n, --no-shebang      Do not add shebang to .envrc
-  -d, --dry-run         Write .envrc to stdout instead of file
-  -i, --ignore          Add .envrc to .gitignore
-      --no-ignore       Do not modify .gitignore
-      --git             Initialize git repo if missing
-  -h, --help            Show this help
+  -p, --package <pkg>      Add a nix package (repeatable)
+  -t, --template <name>    Use a configured template (defaults to \$DIRENV_NEW_DEFAULT_TEMPLATE)
+  -f, --flake              Add 'use flake'
+  -e, --edit               Open .envrc in \$EDITOR
+  -a, --apply              Run 'direnv allow' after creation
+  -s, --silent             Suppress package messages
+  -c, --current            Use current path in message
+  -u, --up                 Add source up to parent .envrc if exists
+  -n, --no-shebang        Do not add shebang to .envrc
+  -d, --dry-run            Write .envrc to stdout instead of file
+  -i, --ignore [type]      Skip adding to .gitignore (both|shell|folder)
+                           Default: add both .envrc and .direnv
+      --git                Initialize git repo if missing
+  -h, --help               Show this help
 EOF
   exit 0
 }
@@ -54,8 +54,7 @@ open_editor=false
 no_shebang=false
 auto_allow=false
 silent=false
-add_envrc_to_ignore=false
-no_ignore="${DIRENV_NEW_NO_IGNORE:-false}"
+ignore_type=""
 init_git="${DIRENV_NEW_CREATE_GIT:-false}"
 
 while [[ $# -gt 0 ]]; do
@@ -75,18 +74,21 @@ while [[ $# -gt 0 ]]; do
   -u | --up) source_up=true; shift ;;
   -n | --no-shebang) no_shebang=true; shift ;;
   -d | --dry-run) dry_run=true; shift ;;
-  -i | --ignore) add_envrc_to_ignore=true; shift ;;
-  --no-ignore) no_ignore=true; shift ;;
+  -i | --ignore)
+    if [[ -n "${2:-}" && "$2" != -* ]]; then
+      ignore_type="$2"; shift 2
+    else
+      ignore_type="both"; shift
+    fi
+    if [[ "$ignore_type" != "both" && "$ignore_type" != "shell" && "$ignore_type" != "folder" ]]; then
+      echo "Error: --ignore argument must be 'both', 'shell', or 'folder'"
+      exit 1
+    fi
+    ;;
   --git) init_git=true; shift ;;
   *) echo "Unknown option: $1"; usage ;;
   esac
 done
-
-# Check for conflicting flags
-if [[ "$add_envrc_to_ignore" == true && "$no_ignore" == true ]]; then
-  echo "Error: Cannot use --ignore and --no-ignore together"
-  exit 1
-fi
 
 if [[ "$dry_run" != true && -f .envrc ]]; then
   echo "Error: .envrc already exists."
@@ -186,27 +188,44 @@ fi
 # .gitignore handling
 # -----------------------------------------------------------------------------
 
-if [[ "$dry_run" != true && "$no_ignore" == false ]] && git rev-parse --git-dir &>/dev/null; then
-  entry="/.direnv"
-  if [[ -f .gitignore ]]; then
-    if ! grep -qxF "$entry" .gitignore; then
-      { echo "$entry"
-      } >>.gitignore
+if [[ "$dry_run" != true ]] && git rev-parse --git-dir &>/dev/null; then
+  
+  add_direnv=true
+  add_envrc=true
+  
+  case "$ignore_type" in
+    both)
+      add_direnv=false
+      add_envrc=false
+      ;;
+    shell)
+      add_envrc=false
+      ;;
+    folder)
+      add_direnv=false
+      ;;
+  esac
+  
+  if [[ "$add_direnv" == true ]]; then
+    entry="/.direnv"
+    if [[ -f .gitignore ]]; then
+      if ! grep -qxF "$entry" .gitignore; then
+        echo "$entry" >>.gitignore
+      fi
+    else
+      echo "$entry" >.gitignore
     fi
-  else
-    echo "$entry" >.gitignore
   fi
-fi
-
-if [[ "$dry_run" != true && "$add_envrc_to_ignore" == true && "$no_ignore" == false ]] && git rev-parse --git-dir &>/dev/null; then
-  entry="/.envrc"
-  if [[ -f .gitignore ]]; then
-    if ! grep -qxF "$entry" .gitignore; then
-      { echo "$entry"
-      } >>.gitignore
+  
+  if [[ "$add_envrc" == true ]]; then
+    entry="/.envrc"
+    if [[ -f .gitignore ]]; then
+      if ! grep -qxF "$entry" .gitignore; then
+        echo "$entry" >>.gitignore
+      fi
+    else
+      echo "$entry" >.gitignore
     fi
-  else
-    echo "$entry" >.gitignore
   fi
 fi
 

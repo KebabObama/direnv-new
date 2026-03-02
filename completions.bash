@@ -42,7 +42,7 @@ _direnv_new_completions() {
   cur="${COMP_WORDS[COMP_CWORD]}"
   prev="${COMP_WORDS[COMP_CWORD-1]}"
 
-  opts="-p --package -t --template -f --flake -e --edit -a --apply -s --silent -c --current -n --no-shebang -u --up -d --dry-run --no-ignore --git -h --help"
+  opts="-p --package -t --template -f --flake -e --edit -a --apply -s --silent -c --current -n --no-shebang -u --up -d --dry-run -i --ignore --git -h --help"
 
   case "$prev" in
     -p|--package)
@@ -51,6 +51,10 @@ _direnv_new_completions() {
       ;;
     -t|--template)
       _direnv_new_complete_templates "$cur"
+      return
+      ;;
+    -i|--ignore)
+      COMPREPLY=( $(compgen -W "both shell folder" -- "$cur") )
       return
       ;;
   esac
@@ -78,7 +82,7 @@ _direnv_completions() {
 
   if [[ "${COMP_WORDS[1]}" == "new" ]]; then
     # Delegate to direnv-new completion logic
-    local opts="-p --package -t --template -f --flake -e --edit -a --apply -s --silent -c --current -n --no-shebang -u --up -d --dry-run --no-ignore --git -h --help"
+    local opts="-p --package -t --template -f --flake -e --edit -a --apply -s --silent -c --current -n --no-shebang -u --up -d --dry-run -i --ignore --git -h --help"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
     case "$prev" in
       -p|--package)
@@ -87,6 +91,10 @@ _direnv_completions() {
         ;;
       -t|--template)
         _direnv_new_complete_templates "$cur"
+        return
+        ;;
+      -i|--ignore)
+        COMPREPLY=( $(compgen -W "both shell folder" -- "$cur") )
         return
         ;;
     esac
