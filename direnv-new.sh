@@ -23,6 +23,7 @@ Creates an .envrc file with optional nix packages.
 
 Options:
   -p, --package <pkg>  Add a nix package (repeatable)
+  -t, --template <name> Add a configured template snippet
   -f, --flake          Add 'use flake'
   -e, --edit           Open .envrc in \$EDITOR
   -a, --apply          Run 'direnv allow' after creation
@@ -43,6 +44,7 @@ EOF
 # -----------------------------------------------------------------------------
 
 packages=()
+template_name=""
 dry_run=false
 use_flake=false
 current=false
@@ -60,6 +62,9 @@ while [[ $# -gt 0 ]]; do
     -p|--package)
       [[ -z "${2:-}" ]] && { echo "Error: $1 requires argument"; exit 1; }
       packages+=("$2"); shift 2;;
+    -t|--template)
+      [[ -z "${2:-}" ]] && { echo "Error: $1 requires argument"; exit 1; }
+      template_name="$2"; shift 2;;
     -f|--flake) use_flake=true;shift;;
     -e|--edit) open_editor=true; shift;;
     -a|--apply) auto_allow=true; shift;;
@@ -79,6 +84,24 @@ if [[ "$dry_run" != true && -f .envrc ]]; then
   exit 1
 fi
 
+template_content=""
+if [[ -n "$template_name" ]]; then
+  if declare -p DIRENV_NEW_TEMPLATES &>/dev/null; then
+    if [[ -n "${DIRENV_NEW_TEMPLATES[$template_name]+_}" ]]; then
+      template_content="${DIRENV_NEW_TEMPLATES[$template_name]}"
+    else
+      echo "Error: unknown template '$template_name'."
+      if [[ ${#DIRENV_NEW_TEMPLATES[@]} -gt 0 ]]; then
+        echo "Available templates: ${!DIRENV_NEW_TEMPLATES[*]}"
+      fi
+      exit 1
+    fi
+  else
+    echo "Error: no templates configured."
+    exit 1
+  fi
+fi
+
 # -----------------------------------------------------------------------------
 # Build .envrc
 # -----------------------------------------------------------------------------
@@ -94,6 +117,12 @@ if [[ "$source_up" == true ]]; then
   envrc_content+=$'\n'"if command -v source_up >/dev/null 2>&1; then"
   envrc_content+=$'\n  source_up || true'
   envrc_content+=$'\nfi'
+fi
+
+if [[ -n "$template_content" ]]; then
+  envrc_content+=$'\n'
+  envrc_content+=$'\n# Template: '"$template_name"
+  envrc_content+=$'\n'"$template_content"
 fi
 
 if [[ ${#packages[@]} -gt 0 ]]; then

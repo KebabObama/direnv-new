@@ -20,20 +20,55 @@
     direnvModule = {
       config,
       lib,
+      options,
       pkgs,
       ...
-    }: {
-      options.programs.direnv.new.enable =
-        lib.mkEnableOption "direnv 'new' subcommand";
+    }: let
+      templates = config.programs.direnv.new.templates;
+      templateConfig =
+        lib.optionalString (templates != {}) ''
+          declare -Ag DIRENV_NEW_TEMPLATES
+        ''
+        + lib.concatStringsSep "\n" (lib.mapAttrsToList (
+            name: content: "DIRENV_NEW_TEMPLATES[${lib.escapeShellArg name}]=${lib.escapeShellArg content}"
+          )
+          templates)
+        + lib.optionalString (templates != {}) "\n";
+    in {
+      options.programs.direnv.new = {
+        enable = lib.mkEnableOption "direnv 'new' subcommand";
 
-      config = lib.mkIf config.programs.direnv.new.enable {
-        programs.direnv = {
-          enable = true;
-          package =
-            lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.default;
-          nix-direnv.enable = lib.mkDefault true;
+        templates = lib.mkOption {
+          type = lib.types.attrsOf lib.types.lines;
+          default = {};
+          example = {
+            "python" = ''
+              use flake
+              export PYTHONBREAKPOINT=ipdb.set_trace
+            '';
+          };
+          description = "Named templates available via direnv new -t/--template.";
         };
       };
+
+      config = lib.mkIf config.programs.direnv.new.enable (
+        lib.mkMerge [
+          {
+            programs.direnv = {
+              enable = true;
+              package =
+                lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.default;
+              nix-direnv.enable = lib.mkDefault true;
+            };
+          }
+          (lib.mkIf (templateConfig != "" && options ? environment.etc) {
+            environment.etc."direnv-new/config".text = templateConfig;
+          })
+          (lib.mkIf (templateConfig != "" && options ? xdg.configFile) {
+            xdg.configFile."direnv-new/config".text = templateConfig;
+          })
+        ]
+      );
     };
   in
     {
