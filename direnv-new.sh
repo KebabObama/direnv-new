@@ -190,9 +190,7 @@ if [[ "$dry_run" != true && "$no_ignore" == false ]] && git rev-parse --git-dir 
   entry="/.direnv"
   if [[ -f .gitignore ]]; then
     if ! grep -qxF "$entry" .gitignore; then
-      {
-        echo ""
-        echo "$entry"
+      { echo "$entry"
       } >>.gitignore
     fi
   else
@@ -204,9 +202,7 @@ if [[ "$dry_run" != true && "$add_envrc_to_ignore" == true && "$no_ignore" == fa
   entry="/.envrc"
   if [[ -f .gitignore ]]; then
     if ! grep -qxF "$entry" .gitignore; then
-      {
-        echo ""
-        echo "$entry"
+      { echo "$entry"
       } >>.gitignore
     fi
   else
