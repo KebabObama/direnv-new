@@ -124,9 +124,9 @@ fi
 if [[ "$source_up" == true ]]; then
   envrc_content+=$'\n'
   envrc_content+=$'\n# Inherit parent .envrc if it exists'
-  envrc_content+=$'\n'"if command -v source_up >/dev/null 2>&1; then"
-  envrc_content+=$'\n  source_up || true'
+  envrc_content+=$'\n  source_up >/dev/null 2'
   envrc_content+=$'\nfi'
+  envrc_content+=$'\n'
 fi
 
 if [[ -n "$template_content" ]]; then
