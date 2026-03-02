@@ -149,7 +149,7 @@ if [[ ${#packages[@]} -gt 0 ]]; then
 else
   if [[ "$silent" == false ]]; then
     if [[ "$current" == true ]]; then
-      envrc_content+=$'\n'"echo \"Direnv loaded in $(pwd)\""
+      envrc_content+=$'\n'"echo \"Direnv loaded in \$(pwd)\""
     else
       envrc_content+=$'\n'"echo \"Direnv loaded\""
     fi
