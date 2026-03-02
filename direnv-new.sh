@@ -22,19 +22,19 @@ Usage: direnv new [options]
 Creates an .envrc file with optional nix packages.
 
 Options:
-  -p, --package <pkg>  Add a nix package (repeatable)
-  -t, --template <name> Add a configured template snippet
-  -f, --flake          Add 'use flake'
-  -e, --edit           Open .envrc in \$EDITOR
-  -a, --apply          Run 'direnv allow' after creation
-  -s, --silent         Suppress package messages
-  -c, --current        Use current path in message
-  -u, --up             Add source up to parent .envrc if exists
-  -n, --no-shebang     Do not add shebang to .envrc
-  -d, --dry-run        Write .envrc to stdout instead of file
-      --no-ignore      Do not modify .gitignore
-      --git            Initialize git repo if missing
-  -h, --help           Show this help
+  -p, --package <pkg>   Add a nix package (repeatable)
+  -t, --template <name> Use a configured template (defaults to \$DIRENV_NEW_DEFAULT_TEMPLATE)
+  -f, --flake           Add 'use flake'
+  -e, --edit            Open .envrc in \$EDITOR
+  -a, --apply           Run 'direnv allow' after creation
+  -s, --silent          Suppress package messages
+  -c, --current         Use current path in message
+  -u, --up              Add source up to parent .envrc if exists
+  -n, --no-shebang      Do not add shebang to .envrc
+  -d, --dry-run         Write .envrc to stdout instead of file
+      --no-ignore       Do not modify .gitignore
+      --git             Initialize git repo if missing
+  -h, --help            Show this help
 EOF
   exit 0
 }
@@ -44,7 +44,7 @@ EOF
 # -----------------------------------------------------------------------------
 
 packages=()
-template_name=""
+template_name="${DIRENV_NEW_DEFAULT_TEMPLATE:-}"
 dry_run=false
 use_flake=false
 current=false

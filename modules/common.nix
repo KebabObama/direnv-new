@@ -27,10 +27,17 @@
         };
         description = "Named templates available via direnv new -t/--template.";
       };
+
+      defaultTemplate = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        example = "flake";
+        description = "Default template to use when no -t/--template is specified.";
+      };
     };
   };
 
-  mkTemplateConfig = templates:
+  mkTemplateConfig = templates: defaultTemplate:
     lib.optionalString (templates != {}) ''
       declare -Ag DIRENV_NEW_TEMPLATES
     ''
@@ -43,5 +50,7 @@
         in "DIRENV_NEW_TEMPLATES[${lib.escapeShellArg name}]=${lib.escapeShellArg content}"
       )
       templates)
-    + lib.optionalString (templates != {}) "\n";
+    + lib.optionalString (templates != {}) "\n"
+    + lib.optionalString (defaultTemplate != null) ''      DIRENV_NEW_DEFAULT_TEMPLATE=${lib.escapeShellArg defaultTemplate}
+    '';
 }

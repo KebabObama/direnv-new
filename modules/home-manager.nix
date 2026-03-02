@@ -9,7 +9,8 @@
   ...
 }: let
   templates = config.programs.direnv.new.templates;
-  templateConfig = mkTemplateConfig templates;
+  defaultTemplate = config.programs.direnv.new.defaultTemplate;
+  templateConfig = mkTemplateConfig templates defaultTemplate;
 in {
   options = newSubcommandOptions;
 
