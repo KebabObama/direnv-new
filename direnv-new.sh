@@ -33,6 +33,7 @@ Options:
   -n, --no-shebang          Do not add shebang to .envrc
   -d, --dry-run             Write .envrc to stdout instead of file
   -i, --ignore [type]       Skip adding to .gitignore [both|shell|folder] (default: both)
+  -o, --once                Create hook that will run only once per session
       --git                 Initialize git repo if missing
   -h, --help                Show this help
 EOF
@@ -55,6 +56,7 @@ auto_allow=false
 silent=false
 ignore_type=""
 init_git="${DIRENV_NEW_CREATE_GIT:-false}"
+once=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -67,6 +69,7 @@ while [[ $# -gt 0 ]]; do
     template_name="$2"; shift 2 ;;
   -f | --flake) use_flake=true; shift ;;
   -e | --edit) open_editor=true; shift ;;
+  -o | --once) once=true; shift ;;
   -a | --apply) auto_allow=true; shift ;;
   -s | --silent) silent=true; shift ;;
   -c | --current) current=true; shift ;;
@@ -158,6 +161,22 @@ fi
 
 if [[ "$use_flake" == true ]]; then
   envrc_content+=$'\n'"use flake"
+fi
+
+if [[ "$once" == true ]]; then
+  envrc_content+=$'\n# Run once per machine boot'
+  envrc_content+=$'\nDIRENV_NEW_BOOT_ID_FILE="/proc/sys/kernel/random/boot_id"'
+  envrc_content+=$'\nDIRENV_NEW_STATE_FILE=".direnv/.last_boot_id"'
+  envrc_content+=$'\nif [[ -f "$DIRENV_NEW_BOOT_ID_FILE" ]]; then'
+  envrc_content+=$'\n  CURRENT_BOOT_ID="$(cat "$DIRENV_NEW_BOOT_ID_FILE")"'
+  envrc_content+=$'\n  PREV_BOOT_ID=""'
+  envrc_content+=$'\n  [[ -f "$DIRENV_NEW_STATE_FILE" ]] && PREV_BOOT_ID="$(cat "$DIRENV_NEW_STATE_FILE")"'
+  envrc_content+=$'\n  if [[ "$CURRENT_BOOT_ID" != "$PREV_BOOT_ID" ]]; then'
+  envrc_content+=$'\n    echo "Running one-time setup (new boot)..."'
+  envrc_content+=$'\n    mkdir -p .direnv'
+  envrc_content+=$'\n    echo "$CURRENT_BOOT_ID" > "$DIRENV_NEW_STATE_FILE"'
+  envrc_content+=$'\n  fi'
+  envrc_content+=$'\nfi'
 fi
 
 # -----------------------------------------------------------------------------

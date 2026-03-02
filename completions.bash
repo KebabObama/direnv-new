@@ -9,22 +9,22 @@ _direnv_new_load_config() {
 }
 
 _direnv_new_complete_packages() {
-  local cur="$1"
+  local cur
+  cur="${COMP_WORDS[COMP_CWORD]}"
+
   _direnv_new_load_config
-  if [[ "${DIRENV_NEW_AUTOCOMPLETE:-true}" != "true" ]]; then
-    return
-  fi
-  # Require at least 3 characters to avoid expensive full-index queries
-  if [[ ${#cur} -lt 3 ]]; then
-    return
-  fi
-  if command -v nix &>/dev/null; then
-    local pkgs
-    pkgs=$(nix search nixpkgs "^$cur" --json 2>/dev/null \
-      | grep -oP '"legacyPackages\.[^.]+\.\K[^"]+' \
-      | head -20)
-    COMPREPLY=( $(compgen -W "$pkgs" -- "$cur") )
-  fi
+
+  [[ "${DIRENV_NEW_AUTOCOMPLETE:-true}" != "true" ]] && return
+  [[ ${#cur} -lt 3 ]] && return
+
+  command -v nix >/dev/null 2>&1 || return
+
+  local pkgs
+  pkgs=$(nix search nixpkgs "^${cur}" --json 2>/dev/null \
+    | sed -E 's/.*"nixpkgs\.([^"]+)".*/\1/' \
+    | head -20)
+
+  COMPREPLY=($(compgen -W "$pkgs" -- "$cur"))
 }
 
 _direnv_new_complete_templates() {
@@ -42,7 +42,7 @@ _direnv_new_completions() {
   cur="${COMP_WORDS[COMP_CWORD]}"
   prev="${COMP_WORDS[COMP_CWORD-1]}"
 
-  opts="-p --package -t --template -f --flake -e --edit -a --apply -s --silent -c --current -n --no-shebang -u --up -d --dry-run -i --ignore --git -h --help"
+  opts="-p --package -t --template -f --flake -e --edit -a --apply -s --silent -c -o --once  --current -n --no-shebang -u --up -d --dry-run -i --ignore --git -h --help"
 
   case "$prev" in
     -p|--package)
@@ -82,7 +82,7 @@ _direnv_completions() {
 
   if [[ "${COMP_WORDS[1]}" == "new" ]]; then
     # Delegate to direnv-new completion logic
-    local opts="-p --package -t --template -f --flake -e --edit -a --apply -s --silent -c --current -n --no-shebang -u --up -d --dry-run -i --ignore --git -h --help"
+    local opts="-p --package -t --template -f --flake -e --edit -a -o --once  --apply -s --silent -c --current -n --no-shebang -u --up -d --dry-run -i --ignore --git -h --help"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
     case "$prev" in
       -p|--package)
