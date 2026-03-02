@@ -24,6 +24,7 @@ Creates an .envrc file with optional nix packages.
 Options:
   -p, --package <pkg>       Add a nix package (repeatable)
   -t, --template <name>     Use a configured template (defaults to \$DIRENV_NEW_DEFAULT_TEMPLATE)
+  -x, --export [file]       Export variables via dotenv (default file: .env)
   -f, --flake               Add 'use flake'
   -e, --edit                Open .envrc in \$EDITOR
   -a, --apply               Run 'direnv allow' after creation
@@ -57,6 +58,8 @@ silent=false
 ignore_type=""
 init_git="${DIRENV_NEW_CREATE_GIT:-false}"
 once=false
+use_export=false
+export_file=".env"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -67,6 +70,15 @@ while [[ $# -gt 0 ]]; do
   -t | --template)
     [[ -z "${2:-}" ]] && { echo "Error: $1 requires argument"; exit 1; }
     template_name="$2"; shift 2 ;;
+  -x | --export)
+    use_export=true
+    if [[ -n "${2:-}" && "$2" != -* ]]; then
+      export_file="$2"
+      shift 2
+    else
+      shift
+    fi
+    ;;
   -f | --flake) use_flake=true; shift ;;
   -e | --edit) open_editor=true; shift ;;
   -o | --once) once=true; shift ;;
@@ -127,6 +139,21 @@ fi
 if [[ "$source_up" == true ]]; then
   envrc_content+=$'\n# Inherit parent .envrc if it exists'
   envrc_content+=$'\nsource_up >/dev/null 2>&1 || true'
+  envrc_content+=$'\n'
+fi
+
+if [[ "$use_export" == true ]]; then
+  envrc_content+=$'\nif [ -f '"$export_file"' ]; then'
+  if [[ "$export_file" == ".env" ]]; then
+    envrc_content+=$'\n  dotenv'
+    envrc_content+=$'\nelse'
+    envrc_content+=$'\n  echo "No .env file found. Copy .env.example to get started."'
+  else
+    envrc_content+=$'\n  dotenv '"$export_file"
+    envrc_content+=$'\nelse'
+    envrc_content+=$'\n  echo "No '"$export_file"' file found."'
+  fi
+  envrc_content+=$'\nfi'
   envrc_content+=$'\n'
 fi
 

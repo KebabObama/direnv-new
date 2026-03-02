@@ -92,27 +92,34 @@ direnv new -t python
 # Use with flake
 direnv new -f
 
+# Export vars from .env via dotenv
+direnv new -x
+
+# Export vars from a custom env file
+direnv new -x .env.local
+
 # Combine options
 direnv new -p postgresql -p redis -e -a
 ```
 
 ### Options
 
-| Option                  | Description                               |
-| ----------------------- | ----------------------------------------- |
-| `-p, --package <pkg>`   | Add a nix package (repeatable)            |
-| `-t, --template <name>` | Use a configured template                 |
-| `-f, --flake`           | Add `use flake` directive                 |
-| `-e, --edit`            | Open `.envrc` in `$EDITOR` after creation |
-| `-a, --apply`           | Run `direnv allow` automatically          |
-| `-s, --silent`          | Suppress package load messages            |
-| `-c, --current`         | Include current path in load message      |
-| `-u, --up`              | Source parent `.envrc` if it exists       |
-| `-n, --no-shebang`      | Don't add shebang to `.envrc`             |
-| `-d, --dry-run`         | Print to stdout instead of creating file  |
-| `--no-ignore`           | Don't modify `.gitignore`                 |
-| `--git`                 | Initialize git repo if missing            |
-| `-h, --help`            | Show help message                         |
+| Option                  | Description                                 |
+| ----------------------- | ------------------------------------------- |
+| `-p, --package <pkg>`   | Add a nix package (repeatable)              |
+| `-t, --template <name>` | Use a configured template                   |
+| `-x, --export [file]`   | Load env vars via `dotenv` (`.env` default) |
+| `-f, --flake`           | Add `use flake` directive                   |
+| `-e, --edit`            | Open `.envrc` in `$EDITOR` after creation   |
+| `-a, --apply`           | Run `direnv allow` automatically            |
+| `-s, --silent`          | Suppress package load messages              |
+| `-c, --current`         | Include current path in load message        |
+| `-u, --up`              | Source parent `.envrc` if it exists         |
+| `-n, --no-shebang`      | Don't add shebang to `.envrc`               |
+| `-d, --dry-run`         | Print to stdout instead of creating file    |
+| `--no-ignore`           | Don't modify `.gitignore`                   |
+| `--git`                 | Initialize git repo if missing              |
+| `-h, --help`            | Show help message                           |
 
 ### Environment Variables
 
