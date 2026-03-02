@@ -143,7 +143,7 @@ if [[ ${#packages[@]} -gt 0 ]]; then
     done
     display_parts="{ ${display_parts% } }"
     if [[ "$current" == true ]]; then
-      envrc_content+=$'\n'"echo \"Direnv loaded in $(pwd) with packages: ${display_parts}\""
+      envrc_content+=$'\n'"echo \"Direnv loaded in \$(pwd) with packages: ${display_parts}\""
     else
       envrc_content+=$'\n'"echo \"Direnv loaded with packages: ${display_parts}\""
     fi
