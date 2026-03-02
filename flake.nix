@@ -15,27 +15,10 @@
     systems = flake-utils.lib.defaultSystems;
 
     # ----------------------------------------
-    # Shared module (works for NixOS + HM)
+    # Shared options
     # ----------------------------------------
-    direnvModule = {
-      config,
-      lib,
-      options,
-      pkgs,
-      ...
-    }: let
-      templates = config.programs.direnv.new.templates;
-      templateConfig =
-        lib.optionalString (templates != {}) ''
-          declare -Ag DIRENV_NEW_TEMPLATES
-        ''
-        + lib.concatStringsSep "\n" (lib.mapAttrsToList (
-            name: content: "DIRENV_NEW_TEMPLATES[${lib.escapeShellArg name}]=${lib.escapeShellArg content}"
-          )
-          templates)
-        + lib.optionalString (templates != {}) "\n";
-    in {
-      options.programs.direnv.new = {
+    newSubcommandOptions = lib: {
+      programs.direnv.new = {
         enable = lib.mkEnableOption "direnv 'new' subcommand";
 
         templates = lib.mkOption {
@@ -50,30 +33,77 @@
           description = "Named templates available via direnv new -t/--template.";
         };
       };
+    };
 
-      config = lib.mkIf config.programs.direnv.new.enable (
-        lib.mkMerge [
-          {
-            programs.direnv = {
-              enable = true;
-              package =
-                lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.default;
-              nix-direnv.enable = lib.mkDefault true;
-            };
-          }
-          (lib.mkIf (templateConfig != "" && lib.hasAttrByPath ["environment" "etc"] options) {
-            environment.etc."direnv-new/config".text = templateConfig;
-          })
-          (lib.mkIf (templateConfig != "" && lib.hasAttrByPath ["xdg" "configFile"] options) {
-            xdg.configFile."direnv-new/config".text = templateConfig;
-          })
-        ]
-      );
+    mkTemplateConfig = lib: templates:
+      lib.optionalString (templates != {}) ''
+        declare -Ag DIRENV_NEW_TEMPLATES
+      ''
+      + lib.concatStringsSep "\n" (lib.mapAttrsToList (
+          name: content: "DIRENV_NEW_TEMPLATES[${lib.escapeShellArg name}]=${lib.escapeShellArg content}"
+        )
+        templates)
+      + lib.optionalString (templates != {}) "\n";
+
+    # ----------------------------------------
+    # NixOS module
+    # ----------------------------------------
+    nixosDirenvModule = {
+      config,
+      lib,
+      pkgs,
+      ...
+    }: let
+      templates = config.programs.direnv.new.templates;
+      templateConfig = mkTemplateConfig lib templates;
+    in {
+      options = newSubcommandOptions lib;
+
+      config = lib.mkIf config.programs.direnv.new.enable {
+        programs.direnv = {
+          enable = true;
+          package =
+            lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.default;
+          nix-direnv.enable = lib.mkDefault true;
+        };
+
+        environment.etc = lib.mkIf (templateConfig != "") {
+          "direnv-new/config".text = templateConfig;
+        };
+      };
+    };
+
+    # ----------------------------------------
+    # Home Manager module
+    # ----------------------------------------
+    homeManagerDirenvModule = {
+      config,
+      lib,
+      pkgs,
+      ...
+    }: let
+      templates = config.programs.direnv.new.templates;
+      templateConfig = mkTemplateConfig lib templates;
+    in {
+      options = newSubcommandOptions lib;
+
+      config = lib.mkIf config.programs.direnv.new.enable {
+        programs.direnv = {
+          enable = true;
+          package =
+            lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.default;
+          nix-direnv.enable = lib.mkDefault true;
+        };
+
+        home.file = lib.mkIf (templateConfig != "") {
+          ".config/direnv-new/config".text = templateConfig;
+        };
+      };
     };
   in
     {
-      homeManagerModules.default = direnvModule;
-      nixosModules.default = direnvModule;
+      homeManagerModules.default = homeManagerDirenvModule;
+      nixosModules.default = nixosDirenvModule;
     }
     // flake-utils.lib.eachSystem systems (
       system: let
